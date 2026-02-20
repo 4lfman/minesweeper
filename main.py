@@ -1,6 +1,6 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QVBoxLayout, QGridLayout, QMainWindow
-from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtCore import pyqtSlot, pyqtSignal, Qt
 from PyQt5 import QtCore
 from PyQt5.QtGui import QFont
 
@@ -37,6 +37,20 @@ class Window(QMainWindow):
 
         self.main_widget.setLayout(layout)
 
+# Creating a subclass for QPushButton so we can handle both left and right mouse clicks
+class MineTile(QPushButton):
+    # Define signals that we will be able to send
+    rightClicked =  pyqtSignal()
+    leftClicked =   pyqtSignal()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.RightButton:
+            self.rightClicked.emit()
+        elif event.button() == Qt.LeftButton and not self.isChecked():
+            self.leftClicked.emit()
+            super().mousePressEvent(event)
+
+
 class Minesweeper(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -67,7 +81,7 @@ class Minesweeper(QMainWindow):
         for i in range(self.gridSize):
             innerList = []
             for j in range(self.gridSize):
-                tmpBtn = QPushButton()
+                tmpBtn = MineTile()
                 tmpBtn.x = i
                 tmpBtn.y = j
                 innerList.append(tmpBtn)
@@ -82,7 +96,9 @@ class Minesweeper(QMainWindow):
         y = 90
         for i in range(self.gridSize):
             for j in range(self.gridSize):
-                self.buttonList[i][j].clicked.connect(self.actionCalled)
+                self.buttonList[i][j].leftClicked.connect(self.revealTile)
+                self.buttonList[i][j].rightClicked.connect(self.flagTile)
+                self.buttonList[i][j].setCheckable(True)
                 self.buttonList[i][j].setFont(QFont(QFont("Times", 20)))
 
         # Button to reset the game to the starting position
@@ -96,7 +112,7 @@ class Minesweeper(QMainWindow):
         mapGrid.addWidget(self.turnLabel, self.gridSize, 0, 3, math.floor(self.gridSize/2))
 
     # Called when a field is pressed
-    def actionCalled(self):
+    def revealTile(self):
         self.turn += 1
         self.turnLabel.setText(f"Turn: {self.turn}")
 
@@ -109,6 +125,14 @@ class Minesweeper(QMainWindow):
             button.setText(f'{self.adjacentMines(button)}')
             self.winCheck()
 
+    def flagTile(self):
+        button = self.sender()
+        button.setChecked(not button.isChecked()) 
+
+        if button.isChecked():
+            button.setText('o')
+        else:
+            button.setText('')
 
 
     def resetGame(self):
@@ -122,6 +146,8 @@ class Minesweeper(QMainWindow):
             for j in range(self.gridSize):
                 self.buttonList[i][j].setText("")
                 self.buttonList[i][j].setEnabled(True)
+                self.buttonList[i][j].setChecked(False)
+                self.buttonList[i][j].setDown(False)
                 
     def mineClicked(self, button):
         button.setText("Boom")
