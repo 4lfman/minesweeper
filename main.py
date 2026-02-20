@@ -68,6 +68,8 @@ class Minesweeper(QMainWindow):
             innerList = []
             for j in range(self.gridSize):
                 tmpBtn = QPushButton()
+                tmpBtn.x = i
+                tmpBtn.y = j
                 innerList.append(tmpBtn)
                 mapGrid.addWidget(tmpBtn, i, j)
 
@@ -84,7 +86,7 @@ class Minesweeper(QMainWindow):
                 #                                  y*j + 20,
                 #                                  80, 80)
                 self.buttonList[i][j].clicked.connect(self.actionCalled)
-                self.buttonList[i][j].setFont(QFont(QFont("Times", 25)))
+                self.buttonList[i][j].setFont(QFont(QFont("Times", 20)))
                 if((i,j) in self.mines):
                     self.buttonList[i][j].isMine = True
                 else:
@@ -111,10 +113,11 @@ class Minesweeper(QMainWindow):
         if button.isMine:
             self.mineClicked(button)
         else:
-            button.setText("X")
+            button.setText(f'{self.adjacentMines(button)}')
 
 
     def resetGame(self):
+        self.setWindowTitle("The game has begun!")
         self.turn = 0
         self.turnLabel.setText(f"Turn: {self.turn}")
 
@@ -131,10 +134,19 @@ class Minesweeper(QMainWindow):
                 
     def mineClicked(self, button):
         button.setText("Boom")
+        self.setWindowTitle("You lost! Reset the game to try again")
 
         for i in range(self.gridSize):
             for j in range(self.gridSize):
                 self.buttonList[i][j].setEnabled(False)
+
+    def adjacentMines(self, button):
+        c = 0
+        directions = [(-1,0),(1,0),(0,1),(0,-1)]
+        for direction in directions:
+            if((button.x+direction[0], button.y+direction[1]) in self.mines):
+                c+=1
+        return c
 
     def selectMineLocations(self, gridSize, nbrMines):
         mines = []
