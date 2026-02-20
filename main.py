@@ -82,15 +82,8 @@ class Minesweeper(QMainWindow):
         y = 90
         for i in range(self.gridSize):
             for j in range(self.gridSize):
-                #self.buttonList[i][j].setGeometry(x*i + 20,
-                #                                  y*j + 20,
-                #                                  80, 80)
                 self.buttonList[i][j].clicked.connect(self.actionCalled)
                 self.buttonList[i][j].setFont(QFont(QFont("Times", 20)))
-                if((i,j) in self.mines):
-                    self.buttonList[i][j].isMine = True
-                else:
-                    self.buttonList[i][j].isMine = False
 
         # Button to reset the game to the starting position
         resetButton = QPushButton()
@@ -110,10 +103,12 @@ class Minesweeper(QMainWindow):
         button = self.sender()
         button.setEnabled(False)
 
-        if button.isMine:
+        if (button.x,button.y) in self.mines:
             self.mineClicked(button)
         else:
             button.setText(f'{self.adjacentMines(button)}')
+            self.winCheck()
+
 
 
     def resetGame(self):
@@ -127,10 +122,6 @@ class Minesweeper(QMainWindow):
             for j in range(self.gridSize):
                 self.buttonList[i][j].setText("")
                 self.buttonList[i][j].setEnabled(True)
-                if((i,j) in self.mines):
-                    self.buttonList[i][j].isMine = True
-                else:
-                    self.buttonList[i][j].isMine = False
                 
     def mineClicked(self, button):
         button.setText("Boom")
@@ -156,13 +147,21 @@ class Minesweeper(QMainWindow):
             if newMine not in mines:
                 mines.append(newMine)
 
-        print(f'Selected the following mines: {mines}')
         return mines
+
+    def winCheck(self):
+        if self.turn != self.gridSize**2 - self.nbrMines:
+            return
+
+        for i in range(self.gridSize):
+            for j in range(self.gridSize):
+                self.buttonList[i][j].setEnabled(False)
+
+        self.setWindowTitle("You won! Press reset to play again")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
     window = Minesweeper()
-    #window = Window()
     window.show()
     sys.exit(app.exec_())
