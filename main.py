@@ -4,6 +4,9 @@ from PyQt5.QtCore import pyqtSlot
 from PyQt5 import QtCore
 from PyQt5.QtGui import QFont
 
+import math
+import numpy as np
+
 def start_game():
     print("Let the games begin!")
 
@@ -51,10 +54,12 @@ class Minesweeper(QMainWindow):
         self.show()
 
     def UiComponents(self):
-        self.turn = 0
-        
         # Square map side length
         self.gridSize = 6
+
+        self.turn = 0
+        self.nbrMines = 5
+        self.mines = self.selectMineLocations(self. gridSize, self.nbrMines)
         
         # Add pressable buttons
         mapGrid = QGridLayout()
@@ -80,29 +85,67 @@ class Minesweeper(QMainWindow):
                 #                                  80, 80)
                 self.buttonList[i][j].clicked.connect(self.actionCalled)
                 self.buttonList[i][j].setFont(QFont(QFont("Times", 25)))
+                if((i,j) in self.mines):
+                    self.buttonList[i][j].isMine = True
+                else:
+                    self.buttonList[i][j].isMine = False
 
         # Button to reset the game to the starting position
         resetButton = QPushButton()
         resetButton.clicked.connect(self.resetGame)
         resetButton.setText("Reset Game")
-        mapGrid.addWidget(resetButton, self.gridSize, 0, 1, self.gridSize)
+        mapGrid.addWidget(resetButton, self.gridSize, math.ceil(self.gridSize/2), 3, math.floor(self.gridSize/2))
+
+        # Turnlabel
+        self.turnLabel = QLabel("Turn: 0")
+        mapGrid.addWidget(self.turnLabel, self.gridSize, 0, 3, math.floor(self.gridSize/2))
 
     # Called when a field is pressed
     def actionCalled(self):
         self.turn += 1
+        self.turnLabel.setText(f"Turn: {self.turn}")
 
         button = self.sender()
-
         button.setEnabled(False)
-        button.setText("X")
+
+        if button.isMine:
+            self.mineClicked(button)
+        else:
+            button.setText("X")
+
 
     def resetGame(self):
         self.turn = 0
+        self.turnLabel.setText(f"Turn: {self.turn}")
+
+        self.mines = self.selectMineLocations(self.gridSize, self.nbrMines)
 
         for i in range(self.gridSize):
             for j in range(self.gridSize):
                 self.buttonList[i][j].setText("")
                 self.buttonList[i][j].setEnabled(True)
+                if((i,j) in self.mines):
+                    self.buttonList[i][j].isMine = True
+                else:
+                    self.buttonList[i][j].isMine = False
+                
+    def mineClicked(self, button):
+        button.setText("Boom")
+
+        for i in range(self.gridSize):
+            for j in range(self.gridSize):
+                self.buttonList[i][j].setEnabled(False)
+
+    def selectMineLocations(self, gridSize, nbrMines):
+        mines = []
+        
+        while len(mines)<nbrMines:
+            newMine = (np.random.randint(0, gridSize), np.random.randint(0,gridSize)) 
+            if newMine not in mines:
+                mines.append(newMine)
+
+        print(f'Selected the following mines: {mines}')
+        return mines
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
