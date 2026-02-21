@@ -1,11 +1,12 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QVBoxLayout, QGridLayout, QMainWindow
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QVBoxLayout, QGridLayout, QMainWindow, QMenu, QAction
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, Qt
 from PyQt5 import QtCore
 from PyQt5.QtGui import QFont
 
 import math
 import numpy as np
+from enum import Enum
 
 def start_game():
     print("Let the games begin!")
@@ -50,6 +51,9 @@ class MineTile(QPushButton):
             self.leftClicked.emit()
             super().mousePressEvent(event)
 
+class Solvers(Enum):
+    ALL_KNOWING = "All knowing"
+    SWEEP_FOR_ZEROS = "Sweep for zeros"
 
 class Minesweeper(QMainWindow):
     def __init__(self):
@@ -105,20 +109,51 @@ class Minesweeper(QMainWindow):
         resetButton = QPushButton()
         resetButton.clicked.connect(self.resetGame)
         resetButton.setText("Reset Game")
-        mapGrid.addWidget(resetButton, self.gridSize, math.ceil(self.gridSize/2), 2, math.floor(self.gridSize/2))
+        mapGrid.addWidget(resetButton, self.gridSize+1, 0, 2, math.floor(self.gridSize/2))
 
         # Turnlabel
         self.turnLabel = QLabel("Turn: 0")
-        mapGrid.addWidget(self.turnLabel, self.gridSize, 0, 3, math.floor(self.gridSize/2))
+        mapGrid.addWidget(self.turnLabel, self.gridSize, 0, 1, math.floor(self.gridSize/2))
         
+        # Solver selction menu
+        allKnowing = QAction(Solvers.ALL_KNOWING.value, self)
+        allKnowing.triggered.connect(lambda: self.selectSolver(Solvers.ALL_KNOWING))
+        sweepForZeros = QAction(Solvers.SWEEP_FOR_ZEROS.value, self)
+        sweepForZeros.triggered.connect(lambda: self.selectSolver(Solvers.SWEEP_FOR_ZEROS))
+
+        solvers = QMenu(self)
+        solvers.addAction(allKnowing)
+        solvers.addAction(sweepForZeros)
+        self.solverSelecter = QPushButton("Select solver:")
+        self.solverSelecter.setMenu(solvers)
+        mapGrid.addWidget(self.solverSelecter, self.gridSize, math.ceil(self.gridSize/2), 2, math.floor(self.gridSize/2))
+
         # Solve button
         solveButton = QPushButton()
         solveButton.clicked.connect(self.solveGame)
         solveButton.setText("Solve")
         mapGrid.addWidget(solveButton, self.gridSize + 1, math.ceil(self.gridSize/2), 2, math.floor(self.gridSize/2))
 
+    def selectSolver(self, solver):
+        print(f"Selected solver: {solver.value}")
+        self.solverSelecter.setText(solver.value)
+
     def solveGame(self):
-        print("Solving the game...")
+        match self.solverSelecter.text():
+            case Solvers.ALL_KNOWING.value:
+                print("Solving with All knowing...")
+                self.solveGameAllKnowing()
+                print("Done")
+                return
+            case Solvers.SWEEP_FOR_ZEROS.value:
+                print("Sweeping for zeros...")
+                self.solveGameNoCheat()
+                print("Done")
+                return
+            
+        print("No valid solver!")
+
+    def solveGameAllKnowing(self):
         for i in range(self.gridSize):
             for j in range(self.gridSize):
                 if (i,j) not in self.mines and self.buttonList[i][j].isEnabled():
@@ -126,13 +161,33 @@ class Minesweeper(QMainWindow):
 
         self.setWindowTitle("Solved using the solve button")
 
+    def solveGameNoCheat(self):
+        board = []
+        for i in range(self.gridSize):
+            row =[]
+            for j in range(self.gridSize):
+                row.append(self.buttonList[i][j].text())
+            board.append(row)
+
+        for i in range(self.gridSize):
+            for j in range(self.gridSize):
+                directions = [(-1,0),(1,0),(0,1),(0,-1)]
+                for direction in directions:
+                    if self.validIndex(i+direction[0], j+direction[1]) and self.buttonList[i+direction[0]][j+direction[1]].text() == '0':
+                        self.revealByCoord(i,j)
+        
+    def validIndex(self, x, y):
+        return (0 <= x and x < self.gridSize) and (0 <= y and y < self.gridSize)
 
     def revealByCoord(self, x, y):
+        button = self.buttonList[x][y]
+        if not button.isEnabled():
+            return
+
+        button.setEnabled(False)
+
         self.turn += 1
         self.turnLabel.setText(f"Turn: {self.turn}")
-        
-        button = self.buttonList[x][y]
-        button.setEnabled(False)
 
         if (button.x,button.y) in self.mines:
             self.mineClicked(button)
