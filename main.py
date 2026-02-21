@@ -105,11 +105,41 @@ class Minesweeper(QMainWindow):
         resetButton = QPushButton()
         resetButton.clicked.connect(self.resetGame)
         resetButton.setText("Reset Game")
-        mapGrid.addWidget(resetButton, self.gridSize, math.ceil(self.gridSize/2), 3, math.floor(self.gridSize/2))
+        mapGrid.addWidget(resetButton, self.gridSize, math.ceil(self.gridSize/2), 2, math.floor(self.gridSize/2))
 
         # Turnlabel
         self.turnLabel = QLabel("Turn: 0")
         mapGrid.addWidget(self.turnLabel, self.gridSize, 0, 3, math.floor(self.gridSize/2))
+        
+        # Solve button
+        solveButton = QPushButton()
+        solveButton.clicked.connect(self.solveGame)
+        solveButton.setText("Solve")
+        mapGrid.addWidget(solveButton, self.gridSize + 1, math.ceil(self.gridSize/2), 2, math.floor(self.gridSize/2))
+
+    def solveGame(self):
+        print("Solving the game...")
+        for i in range(self.gridSize):
+            for j in range(self.gridSize):
+                if (i,j) not in self.mines and self.buttonList[i][j].isEnabled():
+                    self.revealByCoord(i,j)
+
+        self.setWindowTitle("Solved using the solve button")
+
+
+    def revealByCoord(self, x, y):
+        self.turn += 1
+        self.turnLabel.setText(f"Turn: {self.turn}")
+        
+        button = self.buttonList[x][y]
+        button.setEnabled(False)
+
+        if (button.x,button.y) in self.mines:
+            self.mineClicked(button)
+        else:
+            button.setText(f'{self.adjacentMines(button)}')
+            button.setDown(True)
+            self.winCheck()
 
     # Called when a field is pressed
     def revealTile(self):
